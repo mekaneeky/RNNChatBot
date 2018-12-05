@@ -5,6 +5,7 @@ import numpy as np
 from keras import layers
 from keras.models import model_from_yaml, Sequential, load_model
 from keras.optimizers import RMSprop
+import keras 
 
 class BaseModel:
 
@@ -13,7 +14,7 @@ class BaseModel:
     user_files = {}
 
     def __init__(self):
-        self.data_path = "/home/sha3bola/Datasets/facebook_messages"
+        self.data_path = "C:\\Code\\facebook_messages\\"
         #Not inheritable right away 
         #self.aggregate_questions = []
         #self.aggregate_answers = [] a generator is a better idea !??
@@ -221,11 +222,13 @@ class KerasModel(BaseModel):
         self.model_name = None#"init_char_RNN.h5" #ensure input maxlen compatibiltiy before import
         self.chars = None
         self.words = None
-        self.maxlen = 10
+        self.maxlen = 60
         self.step = 5
-        self.model_input_type = "word" # Also accepts word for now#needs to be attached to model_desc + model_name
+        self.model_input_type = "char" # Also accepts word for now#needs to be attached to model_desc + model_name
         self.xs = []
         self.ys = []
+        self.mc = keras.callbacks.ModelCheckpoint('weights{epoch:08d}.h5', 
+                                     save_weights_only=False, period=50)
         self.inputize()
         self.vectorize()
         self.model = self.generate_model()
@@ -295,7 +298,7 @@ class KerasModel(BaseModel):
                     self.x_vec[i, t, self.word_dict[word]] = 1
                     self.y_vec[i, self.word_dict[self.ys[i]]] = 1
 
-
+	
     def predict_sequence(self):
         raise NotImplementedError
 
@@ -314,5 +317,5 @@ ass.generate_paths()
 ass.generate_users()
 ass.generate_aggregates()
 krass = KerasModel()
-
+krass.model.fit(krass.x_vec, krass.y_vec, batch_size = 64, epochs = 5000, callbacks = [krass.mc], validation_split=0.2)
 import pdb; pdb.set_trace()
