@@ -1,11 +1,7 @@
 ## Inspired by A.Tier's use of transcript objects
 import os
 import json
-import numpy as np
-from keras import layers
-from keras.models import model_from_yaml, Sequential, load_model
-from keras.optimizers import RMSprop
-import keras 
+import sys
 
 class BaseModel:
 
@@ -14,7 +10,11 @@ class BaseModel:
     user_files = {}
 
     def __init__(self):
-        self.data_path = "C:\\Code\\facebook_messages\\"
+        self.data_path = "/home/sha3bola/Datasets/facebook_messages"
+        self.generate_paths()
+        self.generate_users()
+        self.generate_aggregates()
+
         #Not inheritable right away 
         #self.aggregate_questions = []
         #self.aggregate_answers = [] a generator is a better idea !??
@@ -30,6 +30,11 @@ class BaseModel:
     def generate_users(cls):
         for user_name, file_path in cls.user_files.items():
             cls.user_objects[user_name] = cls._generate_user_object(file_path)
+
+    @classmethod
+    def filter_users(cls):
+        for the_user,the_user_object in cls.user_objects.items():
+            import pdb;pdb.set_trace()
 
     @classmethod
     def generate_aggregates(cls):
@@ -214,95 +219,10 @@ class User(BaseModel):
 
         
 
-class KerasModel(BaseModel):
-
-
-    def __init__(self):
-        self.model_descriptor_yaml = None
-        self.model_name = None#"init_char_RNN.h5" #ensure input maxlen compatibiltiy before import
-        self.chars = None
-        self.words = None
-        self.maxlen = 60
-        self.step = 5
-        self.model_input_type = "char" # Also accepts word for now#needs to be attached to model_desc + model_name
-        self.xs = []
-        self.ys = []
-        self.mc = keras.callbacks.ModelCheckpoint('weights{epoch:08d}.h5', 
-                                     save_weights_only=False, period=50)
-        self.inputize()
-        self.vectorize()
-        self.model = self.generate_model()
-        
-    def generate_model(self):
-        if self.model_descriptor_yaml:
-            # If model descriptor is existant
-            self.model = model_from_yaml(self.model_descriptor_yaml)
-            return self.model
-        elif self.model_name:
-            self.model = load_model(self.model_name)
-        elif self.model_input_type == "char":   
-            # If model yaml not found, build default lstm model
-            self.model = Sequential()
-            self.model.add(layers.LSTM(128, input_shape=(self.maxlen, len(self.chars))))
-            self.model.add(layers.Dense(len(self.chars), activation='softmax'))
-            optimizer = RMSprop(lr=0.01)
-            self.model.compile(loss='categorical_crossentropy', optimizer=optimizer)
-            return self.model
-        elif self.model_input_type == "word":
-            # If model yaml not found, build default lstm model
-            self.model = Sequential()
-            self.model.add(layers.LSTM(128, input_shape=(self.maxlen, len(self.words))))
-            self.model.add(layers.Dense(len(self.words), activation='softmax'))
-            optimizer = RMSprop(lr=0.01)
-            self.model.compile(loss='categorical_crossentropy', optimizer=optimizer)
-            return self.model            
-
-    def inputize(self):
-        if self.model_input_type == "char":
-            print("Generating char input lists")
-            for i in range(0, len(self.aggregate_user_corpus)-self.maxlen, self.step):
-                self.xs.append(self.aggregate_user_corpus[i:i+self.maxlen])
-                self.ys.append(self.aggregate_user_corpus[i+self.maxlen])
-
-            print( "Number of char sequences " +  str(len(self.xs)) )
-            self.chars = sorted(list(set(self.aggregate_user_corpus)))
-            self.char_dict = dict((char, self.chars.index(char)) for char in self.chars)
-
-        elif self.model_input_type == "word":
-            self.word_user_corpus = self.aggregate_user_corpus.split(" ")
-            for i in range(0, len(self.word_user_corpus)-self.maxlen, 1):
-                self.xs.append(self.aggregate_user_corpus[i:i+self.maxlen])
-                self.ys.append(self.aggregate_user_corpus[i+self.maxlen])
-
-            print( "Number of word sequences " +  str(len(self.xs)) )
-            self.words = sorted(list(set(self.word_user_corpus)))
-            print( "Number of words " +  str(len(self.words)) )
-            self.word_dict = dict((word, self.words.index(word)) for word in self.words)
-
-    def vectorize(self):
-        if self.model_input_type == "char":
-            print("Generating input vectors")
-            self.x_vec = np.zeros( (len(self.xs),self.maxlen,len(self.chars)), dtype=np.bool)
-            self.y_vec = np.zeros( (len(self.xs),len(self.chars)), dtype=np.bool )
-            for i, sentence in enumerate(self.xs):
-                for t, char in enumerate(sentence):
-                    self.x_vec[i, t, self.char_dict[char]] = 1
-                    self.y_vec[i, self.char_dict[self.ys[i]]] = 1
-        
-        elif self.model_input_type == "word":
-            self.x_vec = np.zeros( (len(self.xs),self.maxlen,len(self.words)), dtype=np.bool)
-            self.y_vec = np.zeros( (len(self.xs),len(self.words)), dtype=np.bool )
-
-            for i, sentence in enumerate(self.xs):
-                for t, word in enumerate(sentence):
-                    self.x_vec[i, t, self.word_dict[word]] = 1
-                    self.y_vec[i, self.word_dict[self.ys[i]]] = 1
-
-	
-    def predict_sequence(self):
-        raise NotImplementedError
 
 #class KerasWordModel(KerasModel):
+
+    
     
 
 ###############
@@ -312,10 +232,7 @@ class KerasModel(BaseModel):
 # that sets a relationship between question words/scentences and answer words/scentences
 # 
 
-ass = BaseModel()
-ass.generate_paths()
-ass.generate_users()
-ass.generate_aggregates()
-krass = KerasModel()
-krass.model.fit(krass.x_vec, krass.y_vec, batch_size = 64, epochs = 5000, callbacks = [krass.mc], validation_split=0.2)
-import pdb; pdb.set_trace()
+#krass = KerasModel()
+
+##while True:
+#    krass.predict_sequence()
